@@ -176,6 +176,7 @@ namespace PickPocketCops
     {
         private static bool PickFailed = false;
         private static Vector3 oldDestination = new Vector3();
+        private static Il2CppScheduleOne.NPCs.Behaviour.Behaviour oldBehaviour;
 
         static void Postfix(Il2CppScheduleOne.UI.PickpocketScreen __instance)
         {
@@ -188,6 +189,7 @@ namespace PickPocketCops
             if (__instance.IsOpen && !PickFailed)
             {
                 var Officer = __instance.npc;
+                oldBehaviour = Officer.behaviour.GetEnabledBehaviour();
                 Officer.Movement.MoveSpeedMultiplier = 0;
                 oldDestination = Officer.Movement.CurrentDestination;
 
@@ -197,10 +199,15 @@ namespace PickPocketCops
             {
                 var Officer = __instance.npc;
                 Officer.Movement.MoveSpeedMultiplier = 1;
+                Officer.behaviour.AddEnabledBehaviour(oldBehaviour);
 
                 if (oldDestination != Vector3.zero)
                 {
                     Officer.Movement.SetDestination(oldDestination);
+                }
+                else
+                {
+                    Officer.Movement.SetDestination(Officer.transform.position + new Vector3(1, 0, 1));
                 }
                 PickFailed = false;
             }
@@ -217,7 +224,6 @@ namespace PickPocketCops
 
                     var Officer = playerCrimeData.NearestOfficer;
                     Officer.BeginFootPursuit_Networked(player.NetworkObject, true);
-                    MelonLogger.Msg("Set pursuit level to NonLethal.");
                 }
                 __instance.isFail = false;
                 __instance.OnDestroy();
@@ -233,9 +239,7 @@ namespace PickPocketCops
         {
             var officersList = PickPocketCops.GetAllOfficers();
             PickPocketCops.DistributeRandomLootToOfficers(officersList);
-            MelonLogger.Msg("Officers Restocked with Random Loot after sleep.");
         }
 
     }
-
 }
