@@ -176,7 +176,6 @@ namespace PickPocketCops
     {
         private static bool PickFailed = false;
         private static Vector3 oldDestination = new Vector3();
-        private static Il2CppScheduleOne.NPCs.Behaviour.Behaviour oldBehaviour;
 
         static void Postfix(Il2CppScheduleOne.UI.PickpocketScreen __instance)
         {
@@ -189,7 +188,6 @@ namespace PickPocketCops
             if (__instance.IsOpen && !PickFailed)
             {
                 var Officer = __instance.npc;
-                oldBehaviour = Officer.behaviour.GetEnabledBehaviour();
                 Officer.Movement.MoveSpeedMultiplier = 0;
                 oldDestination = Officer.Movement.CurrentDestination;
 
@@ -199,7 +197,6 @@ namespace PickPocketCops
             {
                 var Officer = __instance.npc;
                 Officer.Movement.MoveSpeedMultiplier = 1;
-                Officer.behaviour.AddEnabledBehaviour(oldBehaviour);
 
                 if (oldDestination != Vector3.zero)
                 {
