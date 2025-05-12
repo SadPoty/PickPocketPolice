@@ -6,6 +6,8 @@ using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using UnityEngine;
 using System.Linq;
 using Il2CppScheduleOne.PlayerScripts;
+using static LawEnforcementEnhancementMod.OfficerSpawnSystem;
+using System.Collections.Generic;
 
 [assembly: MelonInfo(typeof(PickPocketCops.PickPocketCops), PickPocketCops.BuildInfo.Name, PickPocketCops.BuildInfo.Version, PickPocketCops.BuildInfo.Author, PickPocketCops.BuildInfo.DownloadLink)]
 [assembly: MelonColor()]
@@ -19,24 +21,30 @@ namespace PickPocketCops
         public const string Description = "Make cops pickpockable";
         public const string Author = "SadPoty";
         public const string Company = null;
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.1";
         public const string DownloadLink = null;
     }
 
     public class PickPocketCops : MelonMod
     {
-        public static HarmonyLib.Harmony HarmonyInstance;
-
-        public override void OnApplicationStart()
-        {
-            HarmonyInstance = new HarmonyLib.Harmony("com.sadpoty.pickpocketcops");
-            HarmonyInstance.PatchAll();
-        }
+        // Patch for LawEnforcementEnhancementMod
+        System.Type policeManagerType = AccessTools.TypeByName("LawEnforcementEnhancementMod.OfficerSpawnSystem");
+        static List<PoliceOfficer> SpawnedOfficer = new List<PoliceOfficer>();
+        public static bool IsLEEPatch = false;
 
         public override void OnSceneWasLoaded(int buildIndex, string sceneName)
         {
             if (sceneName == "Main")
             {
+                if (policeManagerType != null)
+                {
+                    var original = AccessTools.Method(policeManagerType, "SpawnOfficer");
+                    var postfix = typeof(PickPocketCops).GetMethod(nameof(PostEnablePickPocket), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+
+                    HarmonyInstance.Patch(original, postfix: new HarmonyMethod(postfix));
+                    IsLEEPatch = true;
+                    MelonLogger.Msg("LawEnforcementEnhancementMod detected !");
+                }
                 EnablePickpocketOnOfficers();
             }
         }
@@ -168,6 +176,105 @@ namespace PickPocketCops
         }
 
 
+        // Patch for LawEnforcementEnhancementMod
+        // https://github.com/surrealnirvana/LawEnforcementEnhancementMod
+        private static void PostEnablePickPocket(Vector3 position, District district, bool isForDistrictPopulation)
+        {
+            var coreType = AccessTools.TypeByName("LawEnforcementEnhancementMod.Core");
+            var instanceProp = coreType.GetProperty("Instance", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+            var coreInstance = instanceProp.GetValue(null);
+            var officerSystemProp = coreType.GetProperty("OfficerSpawnSystem", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            var officerSystemInstance = officerSystemProp.GetValue(coreInstance);
+            var officerSystemType = officerSystemInstance.GetType();
+            var activeOfficersField = officerSystemType.GetField("_activeOfficers", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (coreType == null)
+            {
+                MelonLogger.Error("Core type not found!");
+                return;
+            }
+            if (instanceProp == null)
+            {
+                MelonLogger.Error("Core.Instance property not found!");
+                return;
+            }
+
+            if (coreInstance == null)
+            {
+                MelonLogger.Error("Core.Instance is null!");
+                return;
+            }
+
+            if (officerSystemProp == null)
+            {
+                MelonLogger.Error("OfficerSpawnSystem property not found!");
+                return;
+            }
+
+            if (officerSystemInstance == null)
+            {
+                MelonLogger.Error("OfficerSpawnSystem instance is null!");
+                return;
+            }
+
+            if (activeOfficersField == null)
+            {
+                MelonLogger.Error("_activeOfficers field not found!");
+                return;
+            }
+
+            var activeOfficersList = activeOfficersField.GetValue(officerSystemInstance) as System.Collections.Generic.List<PoliceOfficer>;
+            if (activeOfficersList == null)
+            {
+                MelonLogger.Error("_activeOfficers list is null!");
+                return;
+            }
+
+            var officer = activeOfficersList.Last();
+            SpawnedOfficer.Add(officer);
+            officer.Inventory.CanBePickpocketed = true;
+            officer.Inventory.RandomCash = true;
+            SetupCustomLootPool(officer);
+            DistributeRandomLootToOfficer(officer);
+        }
+
+        public static List<PoliceOfficer> GetSpawnedOfficers()
+        {
+            return SpawnedOfficer;
+        }
+
+        public static bool GetLEEPatch()
+        {
+            return IsLEEPatch;
+        }
+
+        public static void DistributeRandomLootToOfficer(PoliceOfficer officer)
+        {
+            var itemPool = officer.Inventory.RandomItemDefinitions;
+            var randomItemDef = itemPool[Random.Range(0, itemPool.Length)];
+
+            int quantity = 1;
+            int value;
+
+            switch (randomItemDef.name)
+            {
+                case "Revolver":
+                case "RevolverCylinder":
+                    value = 6;
+                    break;
+
+                case "M1911":
+                case "M1911_Magazine":
+                    value = 7;
+                    break;
+
+                default:
+                    value = 1;
+                    break;
+            }
+
+            var itemInstance = new IntegerItemInstance(randomItemDef, quantity, value);
+            officer.Inventory.InsertItem(itemInstance);
+        }
 
     }
 
@@ -236,7 +343,15 @@ namespace PickPocketCops
         {
             var officersList = PickPocketCops.GetAllOfficers();
             PickPocketCops.DistributeRandomLootToOfficers(officersList);
-        }
 
+            if (PickPocketCops.GetLEEPatch())
+            {
+                var SpawnedOfficers = PickPocketCops.GetSpawnedOfficers();
+                foreach (var officer in SpawnedOfficers)
+                {
+                    PickPocketCops.DistributeRandomLootToOfficer(officer);
+                }
+            }
+        }
     }
 }

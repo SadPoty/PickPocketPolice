@@ -58,6 +58,9 @@
     <Reference Include="Il2CppSystem">
       <HintPath>C:\Users\JulienS\AppData\Roaming\com.kesomannen.gale\schedule-i\profiles\Default\MelonLoader\Il2CppAssemblies\Il2CppSystem.dll</HintPath>
     </Reference>
+    <Reference Include="Law_Enforcement_Enhancement">
+      <HintPath>C:\Users\JulienS\Downloads\Law_Enforcement_Enhancement.dll</HintPath>
+    </Reference>
     <Reference Include="MelonLoader, Version=0.7.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\packages\LavaGang.MelonLoader.0.7.0\lib\net35\MelonLoader.dll</HintPath>
     </Reference>
