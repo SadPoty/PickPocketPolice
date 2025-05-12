@@ -21,7 +21,7 @@ namespace PickPocketCops
         public const string Description = "Make cops pickpockable";
         public const string Author = "SadPoty";
         public const string Company = null;
-        public const string Version = "1.0.1";
+        public const string Version = "1.0.2";
         public const string DownloadLink = null;
     }
 
