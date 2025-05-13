@@ -320,7 +320,7 @@ namespace PickPocketCops
             {
                 var playerCrimeData = UnityEngine.Object.FindObjectOfType<Il2CppScheduleOne.PlayerScripts.PlayerCrimeData>();
 
-                if (playerCrimeData != null)
+                if (playerCrimeData != null && !__instance.npc.Health.IsKnockedOut && !__instance.npc.Health.IsDead)
                 {
                     playerCrimeData.SetPursuitLevel(PlayerCrimeData.EPursuitLevel.NonLethal);
 
