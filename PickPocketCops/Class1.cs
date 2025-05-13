@@ -8,6 +8,7 @@ using System.Linq;
 using Il2CppScheduleOne.PlayerScripts;
 using static LawEnforcementEnhancementMod.OfficerSpawnSystem;
 using System.Collections.Generic;
+using Il2CppFishNet;
 
 [assembly: MelonInfo(typeof(PickPocketCops.PickPocketCops), PickPocketCops.BuildInfo.Name, PickPocketCops.BuildInfo.Version, PickPocketCops.BuildInfo.Author, PickPocketCops.BuildInfo.DownloadLink)]
 [assembly: MelonColor()]
@@ -21,7 +22,7 @@ namespace PickPocketCops
         public const string Description = "Make cops pickpockable";
         public const string Author = "SadPoty";
         public const string Company = null;
-        public const string Version = "1.0.3";
+        public const string Version = "1.0.4";
         public const string DownloadLink = null;
     }
 
@@ -180,61 +181,73 @@ namespace PickPocketCops
         // https://github.com/surrealnirvana/LawEnforcementEnhancementMod
         private static void PostEnablePickPocket(Vector3 position, District district, bool isForDistrictPopulation)
         {
-            var coreType = AccessTools.TypeByName("LawEnforcementEnhancementMod.Core");
-            var instanceProp = coreType.GetProperty("Instance", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
-            var coreInstance = instanceProp.GetValue(null);
-            var officerSystemProp = coreType.GetProperty("OfficerSpawnSystem", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-            var officerSystemInstance = officerSystemProp.GetValue(coreInstance);
-            var officerSystemType = officerSystemInstance.GetType();
-            var activeOfficersField = officerSystemType.GetField("_activeOfficers", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (coreType == null)
+            if (InstanceFinder.NetworkManager.IsClientOnly)
             {
-                MelonLogger.Error("Core type not found!");
-                return;
+                var Officers = PoliceOfficer.Officers;
+                foreach (var officer in Officers)
+                {
+                    officer.Inventory.CanBePickpocketed = true;
+                }
             }
-            if (instanceProp == null)
+            else
             {
-                MelonLogger.Error("Core.Instance property not found!");
-                return;
-            }
+                var coreType = AccessTools.TypeByName("LawEnforcementEnhancementMod.Core");
+                var instanceProp = coreType.GetProperty("Instance", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+                var coreInstance = instanceProp.GetValue(null);
+                var officerSystemProp = coreType.GetProperty("OfficerSpawnSystem", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                var officerSystemInstance = officerSystemProp.GetValue(coreInstance);
+                var officerSystemType = officerSystemInstance.GetType();
+                var activeOfficersField = officerSystemType.GetField("_activeOfficers", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var activeOfficersList = activeOfficersField.GetValue(officerSystemInstance) as System.Collections.Generic.List<PoliceOfficer>;
 
-            if (coreInstance == null)
-            {
-                MelonLogger.Error("Core.Instance is null!");
-                return;
-            }
+                if (coreType == null)
+                {
+                    MelonLogger.Error("Core type not found!");
+                    return;
+                }
+                if (instanceProp == null)
+                {
+                    MelonLogger.Error("Core.Instance property not found!");
+                    return;
+                }
 
-            if (officerSystemProp == null)
-            {
-                MelonLogger.Error("OfficerSpawnSystem property not found!");
-                return;
-            }
+                if (coreInstance == null)
+                {
+                    MelonLogger.Error("Core.Instance is null!");
+                    return;
+                }
 
-            if (officerSystemInstance == null)
-            {
-                MelonLogger.Error("OfficerSpawnSystem instance is null!");
-                return;
-            }
+                if (officerSystemProp == null)
+                {
+                    MelonLogger.Error("OfficerSpawnSystem property not found!");
+                    return;
+                }
 
-            if (activeOfficersField == null)
-            {
-                MelonLogger.Error("_activeOfficers field not found!");
-                return;
-            }
+                if (officerSystemInstance == null)
+                {
+                    MelonLogger.Error("OfficerSpawnSystem instance is null!");
+                    return;
+                }
 
-            var activeOfficersList = activeOfficersField.GetValue(officerSystemInstance) as System.Collections.Generic.List<PoliceOfficer>;
-            if (activeOfficersList == null)
-            {
-                MelonLogger.Error("_activeOfficers list is null!");
-                return;
-            }
+                if (activeOfficersField == null)
+                {
+                    MelonLogger.Error("_activeOfficers field not found!");
+                    return;
+                }
 
-            var officer = activeOfficersList.Last();
-            SpawnedOfficer.Add(officer);
-            officer.Inventory.CanBePickpocketed = true;
-            officer.Inventory.RandomCash = true;
-            SetupCustomLootPool(officer);
-            DistributeRandomLootToOfficer(officer);
+                if (activeOfficersList == null)
+                {
+                    MelonLogger.Error("_activeOfficers list is null!");
+                    return;
+                }
+
+                var officer = activeOfficersList.Last();
+                SpawnedOfficer.Add(officer);
+                officer.Inventory.CanBePickpocketed = true;
+                officer.Inventory.RandomCash = true;
+                SetupCustomLootPool(officer);
+                DistributeRandomLootToOfficer(officer);
+            }
         }
 
         public static List<PoliceOfficer> GetSpawnedOfficers()
@@ -316,18 +329,17 @@ namespace PickPocketCops
                 PickFailed = false;
             }
 
-            if (__instance.isFail)
+            if (__instance.isFail && !__instance.npc.Health.IsKnockedOut && !__instance.npc.Health.IsDead)
             {
-                var playerCrimeData = UnityEngine.Object.FindObjectOfType<Il2CppScheduleOne.PlayerScripts.PlayerCrimeData>();
+                var player = Player.Local;
 
-                if (playerCrimeData != null && !__instance.npc.Health.IsKnockedOut && !__instance.npc.Health.IsDead)
+                if (player != null && !InstanceFinder.NetworkManager.IsClientOnly)
                 {
-                    playerCrimeData.SetPursuitLevel(PlayerCrimeData.EPursuitLevel.NonLethal);
-
-                    Player player = UnityEngine.Object.FindObjectsOfType<Player>(true).FirstOrDefault();
-
-                    var Officer = playerCrimeData.NearestOfficer;
+                    var Officer = player.CrimeData.NearestOfficer;
+                    player.CrimeData.SetPursuitLevel(PlayerCrimeData.EPursuitLevel.NonLethal);
+                    player.CrimeData.AddCrime(new Il2CppScheduleOne.Law.Theft(), 2);
                     Officer.BeginFootPursuit_Networked(player.NetworkObject, true);
+                    Officer.PursuitBehaviour.SendEnable();
                 }
                 __instance.isFail = false;
                 __instance.OnDestroy();

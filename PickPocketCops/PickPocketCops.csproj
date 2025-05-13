@@ -75,6 +75,10 @@
     <Reference Include="UnityEngine">
       <HintPath>C:\Users\JulienS\AppData\Roaming\com.kesomannen.gale\schedule-i\profiles\Default\MelonLoader\Il2CppAssemblies\UnityEngine.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.AIModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Schedule I\MelonLoader\Il2CppAssemblies\UnityEngine.AIModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>C:\Users\JulienS\AppData\Roaming\com.kesomannen.gale\schedule-i\profiles\Default\MelonLoader\Il2CppAssemblies\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
